@@ -1,10 +1,13 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; CL-LZMA
+;;;; © Michał "phoe" Herda 2017
 ;;;; cl-lzma.asd
 
 (asdf:defsystem #:cl-lzma
-  :description "LZMA decompressor in portable Common Lisp"
+  :description "CFFI wrapper around LZMA (de)compressor foreign library"
   :author "Michał \"phoe\" Herda <phoe@openmailbox.org>"
-  :license "BSD 2-clause"
+  :license "Public domain"
   :serial t
-  :depends-on (:binary-types)
+  :depends-on (:cl-autowrap)
   :components ((:file "package")
                (:file "cl-lzma")))
