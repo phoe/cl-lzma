@@ -8,6 +8,9 @@ There is no portable Lisp LZMA (de)compressor because:
   * there is hardly any documentation for LZMA algorithm
   * there is no known workforce that can rewrite this in Lisp.
 
+## TODO
+  * write a proper README, since the code seems to be working `on my machine`
+
 ## Compiling
 Right now, only a x64 Linux binary is compiled. To compile your own:
   1. Install the official LZMA SDK from Igor Pavlov.
