@@ -3,8 +3,8 @@
 ;;;; © Michał "phoe" Herda 2017
 ;;;; package.lisp
 
-(defpackage #:cl-lzma/autowrap
-  (:use)
+(uiop:define-package #:cl-lzma/autowrap
+    (:use)
   (:export #:cl-lzma/autowrap
            #:make-i-sz-alloc
            #:lzma-enc-props-init
