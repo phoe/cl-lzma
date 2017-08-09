@@ -117,7 +117,9 @@
             (unless (= unc-len act-len)
               (error "Expected to uncompress ~D bytes, but got ~D bytes."
                      unc-len act-len))
-            (foreign-array-to-lisp dest `(:array :unsigned-char ,unc-len))))))))
+            (coerce (foreign-array-to-lisp dest
+                                           `(:array :unsigned-char ,unc-len))
+                    '(vector (unsigned-byte 8)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Documentation
