@@ -93,7 +93,9 @@
           (error "LZMA compression failed with code ~D." status))
         (let* ((output-length (mem-ref dest-len :unsigned-int))
                (dest (foreign-array-to-lisp dest (byte-array output-length)))
-               (props (foreign-array-to-lisp props-encoded (byte-array 5))))
+               (props (foreign-array-to-lisp props-encoded (byte-array 5)))
+               (dest (coerce dest '(vector (unsigned-byte 8))))
+               (props (coerce props '(vector (unsigned-byte 8)))))
           (values dest props src-len))))))
 
 (defun lzma-decompress (vector props-encoded unc-len)
