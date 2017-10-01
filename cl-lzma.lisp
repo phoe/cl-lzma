@@ -8,16 +8,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; FFI
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declaim (inline system-relative-namestring))
+  (defun system-relative-namestring (system name)
+    (namestring (asdf:system-relative-pathname system name))))
+
 (cffi:define-foreign-library lzma
-  (:darwin #.(asdf:system-relative-pathname
+  (:darwin #.(system-relative-namestring
               :cl-lzma
               #+x86 "bin/lzma-mac32.dylib"
               #+x86-64 "bin/lzma-mac64.dylib"))
-  (:unix #.(asdf:system-relative-pathname
+  (:unix #.(system-relative-namestring
             :cl-lzma
             #+x86 "bin/lzma-lin32.so"
             #+x86-64 "bin/lzma-lin64.so"))
-  (:windows #.(asdf:system-relative-pathname
+  (:windows #.(system-relative-namestring
                :cl-lzma
                #+x86 "bin/lzma-win32.dll"
                #+x86-64 "bin/lzma-win64.dll"))
