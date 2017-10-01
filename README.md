@@ -12,7 +12,9 @@ There is no portable Lisp LZMA (de)compressor because:
   * write a proper README, since the code seems to be working `on my machine`
 
 ## Compiling
-Right now, only a x64 Linux binary is compiled. To compile your own:
+Right now, Windows and Linux x32/x64 binaries are provided.
+
+To compile your own:
   1. Install the official LZMA SDK from Igor Pavlov.
   2. Modify /C/Util/Lzma/makefile.gcc, add -fPIC to CFLAGS.
   3. Issue make, which will build all object files.
