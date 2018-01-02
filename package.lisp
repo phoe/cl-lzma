@@ -22,7 +22,8 @@
 (defpackage #:cl-lzma
   (:use #:cl
         #:autowrap
-        #:static-vectors)
+        #:static-vectors
+        #:fast-io)
   (:import-from #:cffi
                 #:define-foreign-library
                 #:use-foreign-library

@@ -10,6 +10,7 @@
   :serial t
   :depends-on (#:cl-autowrap
                #:cffi
-               #:static-vectors)
+               #:static-vectors
+               #:fast-io)
   :components ((:file "package")
                (:file "cl-lzma")))
