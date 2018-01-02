@@ -48,5 +48,5 @@
            #:decompress-from-vector
            #:decompress-from-stream
            #:decompress-from-buffer
-           #:decompress-from-static-vector
+           #:decompress-from-static-vectors
            #:lzma-test))
