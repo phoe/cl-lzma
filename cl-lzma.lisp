@@ -67,88 +67,135 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Functions
 
+(declaim (inline %init-props))
+(defun %init-props (props input-size)
+  (let ((dict-size (min input-size (expt 2 20))))
+    (lzma-enc-props-init (c-lzma-enc-props-ptr props))
+    (setf (c-lzma-enc-props.dict-size props) dict-size
+          (c-lzma-enc-props.fb props) 40)))
+
+;;; TODO fix variable names
 (defun lzma-compress (vector)
   (check-type vector vector)
   (let ((dest-len (truncate (max 1024 (* (length vector) 1.5)))))
-    (cffi:with-foreign-array
-        (src vector `(:array :unsigned-char ,(length vector)))
-      (with-many-alloc ((dest :unsigned-char dest-len)
-                        (dest-len-ptr :unsigned-int 1))
-        (setf (cffi:mem-ref dest-len-ptr :unsigned-int) dest-len)
-        (%lzma-compress dest dest-len-ptr src (length vector))))))
-
-(defun %lzma-compress (dest dest-len src src-len)
-  (flet ((byte-array (length)  `(:array :uint8 ,length))
-         (init-props (props input-size)
-           (let ((dict-size (min input-size (expt 2 20))))
-             (lzma-enc-props-init (c-lzma-enc-props-ptr props))
-             (setf (c-lzma-enc-props.dict-size props) dict-size
-                   (c-lzma-enc-props.fb props) 40))))
-    (with-many-alloc ((props 'c-lzma-enc-props 1)
-                      (props-size :unsigned-int 1)
-                      (props-encoded :unsigned-char 5))
-      (init-props props src-len)
-      (setf (mem-ref props-size :unsigned-int) 5)
-      (let ((status (lzma-encode dest dest-len src src-len
-                                 props props-encoded props-size
-                                 0 (cffi:null-pointer)
-                                 (i-sz-alloc-ptr *alloc-functions*)
-                                 (i-sz-alloc-ptr *alloc-functions*))))
-        (unless (= status +sz-ok+)
-          (error "LZMA compression failed with code ~D." status))
-        (let* ((output-length (mem-ref dest-len :unsigned-int))
-               (dest (foreign-array-to-lisp dest (byte-array output-length)))
-               (props (foreign-array-to-lisp props-encoded (byte-array 5)))
-               (dest (coerce dest '(vector (unsigned-byte 8))))
-               (props (coerce props '(vector (unsigned-byte 8)))))
-          (values dest props src-len))))))
-
-(defun lzma-decompress (vector props-encoded unc-len)
-  (check-type vector vector)
-  (assert (< unc-len (* 256 1024 1024)))
-  (cffi:with-foreign-array (src vector `(:array :unsigned-char
-                                                ,(length vector)))
-    (cffi:with-foreign-array (props props-encoded '(:array :unsigned-char 5))
-      (with-many-alloc ((e-lzma-status 'e-lzma-status 1)
-                        (proc-out-size :unsigned-long 1)
-                        (proc-in-size :unsigned-long 1)
-                        (dest :unsigned-char unc-len))
-        (setf (mem-ref proc-out-size :unsigned-long) unc-len
-              (mem-ref proc-in-size :unsigned-long) (length vector))
-        (let ((status (lzma-decode dest proc-out-size src proc-in-size
-                                   props 5 +lzma-finish-end+
-                                   e-lzma-status
-                                   (i-sz-alloc-ptr *alloc-functions*))))
-          (let ((act-len (mem-ref proc-out-size :unsigned-int)))
+    (with-static-vectors ((src-vector (length vector) :initial-contents vector)
+                          (dest-vector dest-len))
+      (let* ((src-len (length vector))
+             (props-vector (make-static-vector 5))
+             (src (static-vector-pointer src-vector))
+             (dest (static-vector-pointer dest-vector))
+             (props-encoded (static-vector-pointer props-vector)))
+        (with-many-alloc ((props 'c-lzma-enc-props 1)
+                          (dest-len-ptr :unsigned-int 1)
+                          (props-size :unsigned-int 1))
+          (setf (mem-ref dest-len-ptr :unsigned-int) dest-len
+                (mem-ref props-size :unsigned-int) 5)
+          (%init-props props src-len)
+          (let ((status (lzma-encode dest dest-len-ptr src src-len
+                                     props props-encoded props-size
+                                     0 (cffi:null-pointer)
+                                     (i-sz-alloc-ptr *alloc-functions*)
+                                     (i-sz-alloc-ptr *alloc-functions*))))
             (unless (= status +sz-ok+)
               (error "LZMA compression failed with code ~D." status))
-            (unless (= unc-len act-len)
-              (error "Expected to uncompress ~D bytes, but got ~D bytes."
-                     unc-len act-len))
-            (coerce (foreign-array-to-lisp dest
-                                           `(:array :unsigned-char ,unc-len))
-                    '(vector (unsigned-byte 8)))))))))
+            (let* ((output-length (mem-ref dest-len-ptr :unsigned-int))
+                   (result-vector (make-static-vector output-length))
+                   (result (static-vector-pointer result-vector)))
+              (replace-foreign-memory result dest output-length)
+              (values result-vector props-vector src-len))))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Documentation
+(defun lzma-decompress (vector props-enc unc-len)
+  "Deprecated API for decompression."
+  ;; (warn "LZMA-DECOMPRESS is deprecated. Please use DECOMPRESS-FROM-* ~
+  ;; functions instead.")
+  (check-type vector vector)
+  (check-type props-enc (vector * 5))
+  (check-type unc-len (unsigned-byte 64))
+  (with-static-vectors ((data (length vector) :initial-contents vector)
+                        (props (length props-enc) :initial-contents props-enc))
+    (decompress-from-static-vectors data props unc-len)))
 
-(setf (documentation 'lzma-compress 'function)
-      "Compresses the provided vector using LZMA compression.
+;;; TODO export them all
+(defun decompress-from-vector (vector)
+  "Decompresses the raw LZMA data from VECTOR.
+\
 Arguments:
-  * uncompressed vector, containing only elements of type (unsigned-byte 8).
-Return values:
-  * the resulting byte vector of type (vector (unsigned-byte 8) *),
-  * the encoded LZMA properties of type (vector (unsigned-byte 8) 5),
-  * the original size of uncompressed data - a nonnegative integer.")
+* VECTOR - must be a (VECTOR (UNSIGNED-BYTE 8)).
+Return value: a static octet-vector."
+  (assert (equal (array-element-type vector) '(unsigned-byte 8)))
+  (with-fast-input (buffer vector)
+    (decompress-from-buffer buffer)))
 
-(setf (documentation 'lzma-decompress 'function)
-      "Decompresses the provided data using LZMA decompression.
+(defun decompress-from-stream (stream)
+  "Decompresses the raw LZMA data from STREAM.
+\
 Arguments:
-  * the resulting byte vector of type (vector (unsigned-byte 8) *),
-  * the encoded LZMA properties of type (vector (unsigned-byte 8) 5),
-  * the original size of uncompressed data - a nonnegative integer.
-Return values:
-  * uncompressed vector, containing only elements of type (unsigned-byte 8).")
+* STREAM - must be a stream of (UNSIGNED-BYTE 8)s.
+Return value: a static octet-vector."
+  (assert (subtypep (stream-element-type stream) '(unsigned-byte 8)))
+  (with-fast-input (buffer nil stream)
+    (decompress-from-buffer buffer)))
+
+(defun decompress-from-buffer (buffer)
+  "Decompresses the raw LZMA data from BUFFER.
+\
+Arguments:
+* BUFFER - must be a FAST-IO input buffer of (UNSIGNED-BYTE 8)s.
+Return value: a static octet-vector."
+  (with-static-vectors ((props 5))
+    (fast-read-sequence props buffer)
+    (let ((length (readu64-le buffer)))
+      (with-static-vectors ((data length))
+        (fast-read-sequence data buffer)
+        (decompress-from-static-vectors data props length)))))
+
+(defun decompress-from-static-vectors (data props-encoded decompressed-length)
+  "Decompresses the raw LZMA data from VECTOR, using the provided PROPS-ENCODED
+and LENGTH.
+\
+Arguments:
+* VECTOR - vector representing LZMA compressed data; must be a static
+  octet-vector.
+* PROPS-ENCODED - vector representing encoded LZMA properties; must be a static
+  octet-vector of length 5.
+* DECOMPRESSED-LENGTH - integer representing the length of decompressed data;
+  must be an (UNSIGNED-BYTE 64).
+Return value: a static octet-vector of length DECOMPRESSED-LENGTH."
+  (check-type data (vector (unsigned-byte 8)))
+  (check-type props-encoded (vector (unsigned-byte 8) 5))
+  (check-type decompressed-length (unsigned-byte 64))
+  (%decompress (static-vector-pointer data)
+               (static-vector-pointer props-encoded)
+               (length data) decompressed-length))
+
+(defun %decompress (data-pointer props-pointer
+                    compressed-length decompressed-length)
+  "Internal decompression function.
+\
+Arguments:
+* DATA-POINTER - foreign pointer to memory containing LZMA compressed data.
+* PROPS-POINTER - foreign pointer to memory containing encoded LZMA properties.
+* COMPRESSED-LENGTH - integer representing the length of compressed data.
+* DECOMPRESSED-LENGTH - integer representing the length of decompressed data.
+Return value: a static octet-vector of length DECOMPRESSED-LENGTH."
+  (let* ((result (make-static-vector decompressed-length))
+         (result-pointer (static-vector-pointer result)))
+    (with-many-alloc ((e-lzma-status 'e-lzma-status 1)
+                      (proc-out-size :unsigned-long 1)
+                      (proc-in-size :unsigned-long 1))
+      (setf (mem-ref proc-out-size :unsigned-long) decompressed-length
+            (mem-ref proc-in-size :unsigned-long) compressed-length)
+      (let ((status (lzma-decode result-pointer proc-out-size data-pointer
+                                 proc-in-size props-pointer 5 +lzma-finish-end+
+                                 e-lzma-status
+                                 (i-sz-alloc-ptr *alloc-functions*))))
+        (let ((actual-length (mem-ref proc-out-size :unsigned-int)))
+          (unless (= status +sz-ok+)
+            (error "LZMA compression failed with code ~D." status))
+          (unless (= decompressed-length actual-length)
+            (error "Expected to uncompress ~D bytes, but got ~D bytes."
+                   decompressed-length actual-length))
+          result)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Tests
@@ -168,6 +215,8 @@ Return values:
                       :initial-element 255)
     ,(make-array 1000000 :element-type '(unsigned-byte 8)
                          :initial-element 255)
+    ,(make-array 100000000 :element-type '(unsigned-byte 8)
+                           :initial-element #b10101010)
     ,(random-vector 1000)
     ,(random-vector 1000000)))
 

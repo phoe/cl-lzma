@@ -8,6 +8,8 @@
   :author "Michał \"phoe\" Herda <phoe@openmailbox.org>"
   :license "Public domain"
   :serial t
-  :depends-on (:cl-autowrap)
+  :depends-on (#:cl-autowrap
+               #:cffi
+               #:static-vectors)
   :components ((:file "package")
                (:file "cl-lzma")))

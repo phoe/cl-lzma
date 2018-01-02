@@ -21,7 +21,8 @@
 
 (defpackage #:cl-lzma
   (:use #:cl
-        #:autowrap)
+        #:autowrap
+        #:static-vectors)
   (:import-from #:cffi
                 #:define-foreign-library
                 #:use-foreign-library
@@ -44,4 +45,8 @@
                 #:+lzma-finish-end+)
   (:export #:lzma-compress
            #:lzma-decompress
+           #:decompress-from-vector
+           #:decompress-from-stream
+           #:decompress-from-buffer
+           #:decompress-from-static-vector
            #:lzma-test))
