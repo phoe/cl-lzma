@@ -144,8 +144,10 @@ Arguments:
 Return value: a static octet-vector."
   (with-static-vectors ((props 5))
     (fast-read-sequence props buffer)
-    (let ((length (readu64-le buffer)))
-      (with-static-vectors ((data length))
+    (let* ((length (readu64-le buffer))
+           (safe-length (max 1024 (truncate (* 1.5 length)))))
+      ;; TODO add COMPRESSED-LENGTH instead of the above SAFE-LENGTH shamanism
+      (with-static-vectors ((data safe-length))
         (fast-read-sequence data buffer)
         (decompress-from-static-vectors data props length)))))
 
