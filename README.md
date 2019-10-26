@@ -12,7 +12,7 @@ There is no portable Lisp LZMA (de)compressor because:
   * write a proper README, since the code seems to be working `on my machine`
 
 ## Compiling
-Right now, Windows, Linux and macOS x32/x64 binaries are provided. (macOS binaries were not tested by me yet - if they work for you, please let me know.)
+Right now, Windows, Linux and macOS x32/x64 binaries are provided. (32bit macOS binaries were not tested yet - if they work for you, please let me know.)
 
 To compile your own:
   1. Install the official LZMA SDK from Igor Pavlov.
