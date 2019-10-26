@@ -210,23 +210,23 @@ Return value: a static octet-vector of length DECOMPRESSED-LENGTH."
             do (setf (aref vector i) (random 256)))
       vector)))
 
-(defparameter *lzma-test-input*
-  `(,(make-array 1000 :element-type '(unsigned-byte 8))
-    ,(make-array 1000000 :element-type '(unsigned-byte 8))
-    ,(make-array 1000 :element-type '(unsigned-byte 8)
-                      :initial-element 255)
-    ,(make-array 1000000 :element-type '(unsigned-byte 8)
+(defun %lzma-test-input ()
+  (list (make-array 1000 :element-type '(unsigned-byte 8))
+        (make-array 1000000 :element-type '(unsigned-byte 8))
+        (make-array 1000 :element-type '(unsigned-byte 8)
                          :initial-element 255)
-    ,(make-array 100000000 :element-type '(unsigned-byte 8)
-                           :initial-element #b10101010)
-    ,(random-vector 1000)
-    ,(random-vector 1000000)))
+        (make-array 1000000 :element-type '(unsigned-byte 8)
+                            :initial-element 255)
+        (make-array 100000000 :element-type '(unsigned-byte 8)
+                              :initial-element #b10101010)
+        (random-vector 1000)
+        (random-vector 1000000)))
 
 (defun %lzma-test (input)
   (apply #'lzma-decompress (multiple-value-list (lzma-compress input))))
 
 (defun lzma-test (&optional quietp)
-  (loop for input in *lzma-test-input*
+  (loop for input in (%lzma-test-input)
         with output = nil
         do (let ((*print-length* 8))
              (unless quietp
