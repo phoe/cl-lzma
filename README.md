@@ -12,14 +12,15 @@ There is no portable Lisp LZMA (de)compressor because:
   * write a proper README, since the code seems to be working `on my machine`
 
 ## Compiling
-Right now, Windows and Linux x32/x64 binaries are provided.
+Right now, Windows, Linux and macOS x32/x64 binaries are provided. (macOS binaries were not tested by me yet - if they work for you, please let me know.)
 
 To compile your own:
   1. Install the official LZMA SDK from Igor Pavlov.
-  2. Modify /C/Util/Lzma/makefile.gcc, add -fPIC to CFLAGS.
-  3. Issue make, which will build all object files.
-  4. Build the shared library file. On Linux, this is `$ gcc -shared -O2 -Wall -D_7ZIP_ST -fPIC -o lzma.so *.o` - on other platforms, I bet you can figure it out.
-  5. Put the file anywhere you want and load it with CFFI.
+  1. Modify /C/Util/Lzma/makefile.gcc, add -fPIC to CFLAGS.
+  1. Remove `makefile` and move `makefile.gcc` to `makefile`.
+  1. Issue make, which will build all object files.
+  1. Build the shared library file. On Linux, this is `$ gcc -shared -O2 -Wall -D_7ZIP_ST -fPIC -o lzma.so *.o` - on other platforms, I bet you can figure it out.
+  1. Put the file anywhere you want and load it with CFFI.
 
 ## Credits and inspirations
 This is based on https://gist.github.com/phoe/8cfdcb4f34e0584c703f1751072a7813 - a CFFI wrapper that I quickly hacked up.
